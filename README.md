@@ -30,13 +30,16 @@ Open [http://localhost:3000](http://localhost:3000) to see your application runn
 
 This application is configured to be deployed to GitHub Pages:
 
-1. Run `npm run build` to create a static build in the `out/` folder
-2. Push the `out/` folder contents to the `gh-pages` branch, or enable GitHub Pages in your repo settings to serve from the `docs/` folder or root
+1. Run `npm run build` to create a static build in the `dist/` folder
+2. Push the `dist/` folder contents to the `gh-pages` branch
 3. Your app will be available at `https://yourusername.github.io/repository-name`
 
-Alternatively, you can:
-1. Rename the `out/` folder to `docs/` and serve from the `docs/` folder in GitHub settings
-2. Or use GitHub Actions to automate the deployment process
+### Manual Deployment Steps:
+1. Create a new branch: `git checkout -b gh-pages`
+2. Build the application: `npm run build`
+3. Copy the `dist/` folder contents to the branch root
+4. Push to GitHub: `git add . && git commit -m "Deploy to GitHub Pages" && git push origin gh-pages`
+5. In your GitHub repository settings, enable GitHub Pages and select the `gh-pages` branch as the source
 
 ## 📁 Supported File Types
 
