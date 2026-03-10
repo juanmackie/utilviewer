@@ -70,8 +70,10 @@ export default function Home() {
           // If it fails, try to read as base64 for binary files
           try {
             const base64 = await zipEntry.async('base64')
-            content = `[Binary file - ${formatFileSize(zipEntry._data?.uncompressedSize || 0)}]`
-            size = zipEntry._data?.uncompressedSize || 0
+            // Try to get file size using a more compatible method
+            const uncompressedSize = (zipEntry as any)?.uncompressedSize || 0
+            content = `[Binary file - ${formatFileSize(uncompressedSize)}]`
+            size = uncompressedSize
           } catch {
             content = '[Unable to read file content]'
             size = 0

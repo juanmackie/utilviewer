@@ -20,11 +20,23 @@ npm install
 # Start development server
 npm run dev
 
-# Build for production
+# Build static version for GitHub Pages
 npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see your application running.
+Open [http://localhost:3000](http://localhost:3000) to see your application running during development.
+
+## 🚀 Deploy to GitHub Pages
+
+This application is configured to be deployed to GitHub Pages:
+
+1. Run `npm run build` to create a static build in the `out/` folder
+2. Push the `out/` folder contents to the `gh-pages` branch, or enable GitHub Pages in your repo settings to serve from the `docs/` folder or root
+3. Your app will be available at `https://yourusername.github.io/repository-name`
+
+Alternatively, you can:
+1. Rename the `out/` folder to `docs/` and serve from the `docs/` folder in GitHub settings
+2. Or use GitHub Actions to automate the deployment process
 
 ## 📁 Supported File Types
 
