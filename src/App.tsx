@@ -232,7 +232,7 @@ export default function App() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
-            .util File Viewer
+            .util File Viewer with ❤️ by Juan Mackie
           </h1>
           <p className="mt-2 text-zinc-400">
             Drag and drop or select a .util file to view its contents
