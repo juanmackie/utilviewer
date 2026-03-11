@@ -1,51 +1,45 @@
-import * as React from "react"
+import * as React from 'react'
 
-function cn(...inputs: (string | undefined | null | false)[]) {
-  return inputs.filter(Boolean).join(" ")
-}
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {}
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+export function Card({ className = '', ...props }: CardProps) {
   return (
     <div
-      className={cn(
-        "bg-card text-card-foreground flex flex-col rounded-xl border shadow-sm",
-        className
-      )}
+      className={`bg-card text-card-foreground flex flex-col rounded-xl border shadow-sm ${className}`}
       {...props}
     />
   )
 }
 
-function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
+interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {}
+
+export function CardHeader({ className = '', ...props }: CardHeaderProps) {
   return (
     <div
-      className={cn("flex flex-col gap-1.5 px-6 py-4", className)}
+      className={`flex flex-col gap-1.5 px-6 py-4 ${className}`}
       {...props}
     />
   )
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
+interface CardTitleProps extends React.HTMLAttributes<HTMLDivElement> {}
+
+export function CardTitle({ className = '', ...props }: CardTitleProps) {
   return (
     <div
-      className={cn("font-semibold leading-none", className)}
+      className={`font-semibold leading-none ${className}`}
       {...props}
     />
   )
 }
 
-function CardContent({ className, ...props }: React.ComponentProps<"div">) {
+interface CardContentProps extends React.HTMLAttributes<HTMLDivElement> {}
+
+export function CardContent({ className = '', ...props }: CardContentProps) {
   return (
     <div
-      className={cn("px-6 py-4", className)}
+      className={`px-6 py-4 ${className}`}
       {...props}
     />
   )
-}
-
-export {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
 }

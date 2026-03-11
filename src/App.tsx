@@ -1,10 +1,8 @@
-'use client'
-
 import { useState, useCallback, useRef } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Upload, FileText, X, Copy, Check, AlertCircle, Folder, File, FolderOpen } from 'lucide-react'
 import JSZip from 'jszip'
+import { Button } from './components/ui/button'
+import { Card, CardHeader, CardTitle, CardContent } from './components/ui/card'
 
 interface ExtractedFile {
   name: string
@@ -21,7 +19,7 @@ interface FileInfo {
   selectedFile: ExtractedFile | null
 }
 
-export default function Home() {
+export default function App() {
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -42,7 +40,6 @@ export default function Home() {
       const reader = new FileReader()
       reader.onload = (e) => {
         const arr = new Uint8Array(e.target?.result as ArrayBuffer)
-        // ZIP files start with "PK" (0x50, 0x4B)
         resolve(arr.length >= 2 && arr[0] === 0x50 && arr[1] === 0x4B)
       }
       reader.onerror = () => resolve(false)
@@ -63,14 +60,10 @@ export default function Home() {
 
       if (!isDirectory) {
         try {
-          // Try to read as text
           content = await zipEntry.async('string')
           size = content.length
         } catch {
-          // If it fails, try to read as base64 for binary files
           try {
-            const base64 = await zipEntry.async('base64')
-            // Try to get file size using a more compatible method
             const uncompressedSize = (zipEntry as any)?.uncompressedSize || 0
             content = `[Binary file - ${formatFileSize(uncompressedSize)}]`
             size = uncompressedSize
@@ -92,7 +85,6 @@ export default function Home() {
 
     await Promise.all(promises)
 
-    // Sort: directories first, then by name
     return files.sort((a, b) => {
       if (a.isDirectory && !b.isDirectory) return -1
       if (!a.isDirectory && b.isDirectory) return 1
@@ -104,7 +96,6 @@ export default function Home() {
     setError(null)
     setIsLoading(true)
 
-    // Check file extension
     if (!file.name.toLowerCase().endsWith('.util')) {
       setError('Invalid file type. Please upload a .util file.')
       setIsLoading(false)
@@ -115,7 +106,6 @@ export default function Home() {
       const isZip = await isZipFile(file)
 
       if (isZip) {
-        // Handle as ZIP archive
         const extractedFiles = await extractZipContents(file)
         const textFiles = extractedFiles.filter(f => !f.isDirectory && f.content && !f.content.startsWith('[Binary'))
 
@@ -126,7 +116,6 @@ export default function Home() {
           selectedFile: textFiles.length > 0 ? textFiles[0] : (extractedFiles.find(f => !f.isDirectory) || null)
         })
       } else {
-        // Handle as plain text file
         const reader = new FileReader()
         reader.onload = (e) => {
           const content = e.target?.result as string
@@ -190,7 +179,6 @@ export default function Home() {
     if (files && files.length > 0) {
       validateAndReadFile(files[0])
     }
-    // Reset input value to allow selecting the same file again
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -228,7 +216,6 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 p-4 md:p-8">
       <div className="mx-auto max-w-6xl">
-        {/* Header */}
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
             .util File Viewer
@@ -238,7 +225,6 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Error Alert */}
         {error && (
           <div className="mb-6 flex items-center gap-3 rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-red-400 transition-all">
             <AlertCircle className="h-5 w-5 shrink-0" />
@@ -253,7 +239,6 @@ export default function Home() {
         )}
 
         {!fileInfo ? (
-          /* Upload Zone */
           <div
             onClick={handleClick}
             onDragOver={handleDragOver}
@@ -311,14 +296,11 @@ export default function Home() {
               </Button>
             </div>
 
-            {/* Decorative elements */}
             <div className="absolute -top-1 -right-1 h-20 w-20 rounded-full bg-gradient-to-br from-emerald-400/20 to-transparent blur-2xl" />
             <div className="absolute -bottom-1 -left-1 h-20 w-20 rounded-full bg-gradient-to-br from-teal-400/20 to-transparent blur-2xl" />
           </div>
         ) : (
-          /* File Content Display */
           <div className="flex flex-col gap-4 lg:flex-row">
-            {/* File List Sidebar */}
             {fileInfo.files.length > 1 && (
               <Card className="border-zinc-700 bg-zinc-900/80 backdrop-blur-sm lg:w-72 shrink-0">
                 <CardHeader className="border-b border-zinc-700/50 py-3">
@@ -357,7 +339,6 @@ export default function Home() {
               </Card>
             )}
 
-            {/* Main Content Area */}
             <Card className="border-zinc-700 bg-zinc-900/80 backdrop-blur-sm flex-1 min-w-0">
               <CardHeader className="border-b border-zinc-700/50">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -432,7 +413,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Footer */}
         <div className="mt-8 text-center text-xs text-zinc-600">
           Only .util files are supported. All processing is done locally in your browser.
         </div>

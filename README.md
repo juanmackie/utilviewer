@@ -9,7 +9,7 @@ A lightweight web application for viewing .util files (ZIP archives containing t
 - **Archive Content Navigation**: Browse and view individual files within .util archives
 - **Copy Functionality**: Copy file contents to clipboard with a single click
 - **Responsive Design**: Works on desktop and mobile devices
-- **Modern UI**: Clean, intuitive interface built with Next.js and Tailwind CSS
+- **Modern UI**: Clean, intuitive interface built with Vite, React, and Tailwind CSS
 
 ## 🚀 Quick Start
 
@@ -20,26 +20,82 @@ npm install
 # Start development server
 npm run dev
 
-# Build static version for GitHub Pages
+# Build for production
 npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see your application running during development.
+Open [http://localhost:5173](http://localhost:5173) to see your application running during development.
 
 ## 🚀 Deploy to GitHub Pages
 
-This application is configured to be deployed to GitHub Pages:
+This application is configured for easy GitHub Pages deployment:
 
-1. Run `npm run build` to create a static build in the `dist/` folder
-2. Push the `dist/` folder contents to the `gh-pages` branch
-3. Your app will be available at `https://yourusername.github.io/repository-name`
+### Option 1: Automatic Deployment (Recommended)
 
-### Manual Deployment Steps:
-1. Create a new branch: `git checkout -b gh-pages`
-2. Build the application: `npm run build`
-3. Copy the `dist/` folder contents to the branch root
-4. Push to GitHub: `git add . && git commit -m "Deploy to GitHub Pages" && git push origin gh-pages`
-5. In your GitHub repository settings, enable GitHub Pages and select the `gh-pages` branch as the source
+```bash
+# This builds and deploys to the gh-pages branch
+npm run deploy
+```
+
+### Option 2: Manual Deployment
+
+1. Build the application:
+   ```bash
+   npm run build
+   ```
+
+2. Push the `dist/` folder to the `gh-pages` branch:
+   ```bash
+   npx gh-pages -d dist
+   ```
+
+3. Your app will be available at `https://yourusername.github.io/utilviewer`
+
+### GitHub Actions (Optional)
+
+For automatic deployment on every push to main, create `.github/workflows/deploy.yml`:
+
+```yaml
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build
+        run: npm run build
+      
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+      
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+```
 
 ## 📁 Supported File Types
 
@@ -47,10 +103,10 @@ This application supports `.util` files which are typically ZIP archives contain
 
 ## 🛠️ Tech Stack
 
-- **Framework**: Next.js 16 with App Router
+- **Build Tool**: Vite 6
+- **Framework**: React 19
 - **Language**: TypeScript 5
-- **Styling**: Tailwind CSS 4
-- **UI Components**: shadcn/ui
+- **Styling**: Tailwind CSS 3
 - **Icons**: Lucide React
 - **File Processing**: JSZip
 
@@ -59,3 +115,12 @@ This application supports `.util` files which are typically ZIP archives contain
 - All file processing occurs in your browser
 - No files are uploaded to any server
 - Content remains on your device at all times
+
+## 📝 Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run preview` | Preview production build |
+| `npm run deploy` | Build and deploy to GitHub Pages |
