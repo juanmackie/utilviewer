@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import { Upload, FileText, X, Copy, Check, AlertCircle, Folder, File, FolderOpen } from 'lucide-react'
+import { Upload, FileText, X, Copy, Check, AlertCircle, Folder, File, FolderOpen, Download } from 'lucide-react'
 import JSZip from 'jszip'
 import { Button } from './components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from './components/ui/card'
@@ -189,6 +189,20 @@ export default function App() {
     setError(null)
     setCopied(false)
   }, [])
+
+  const handleDownload = useCallback(() => {
+    if (fileInfo?.selectedFile?.content) {
+      const blob = new Blob([fileInfo.selectedFile.content], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${fileInfo.selectedFile.name}.txt`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    }
+  }, [fileInfo])
 
   const handleCopy = useCallback(async () => {
     if (fileInfo?.selectedFile?.content) {
@@ -380,6 +394,15 @@ export default function App() {
                           Copy
                         </>
                       )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDownload}
+                      className="border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white"
+                    >
+                      <Download className="h-4 w-4" />
+                      Download
                     </Button>
                     <Button
                       variant="destructive"
