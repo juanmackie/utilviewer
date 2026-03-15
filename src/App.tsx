@@ -1,8 +1,13 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { Upload, FileText, X, Copy, Check, AlertCircle, Folder, File, FolderOpen, Download } from 'lucide-react'
 import JSZip from 'jszip'
 import { Button } from './components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from './components/ui/card'
+
+// Security constants
+const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
+const MAX_ZIP_UNCOMPRESSED_SIZE = 500 * 1024 * 1024 // 500MB
+const MAX_FILES_PER_ZIP = 1000
 
 interface ExtractedFile {
   name: string
@@ -19,6 +24,15 @@ interface FileInfo {
   selectedFile: ExtractedFile | null
 }
 
+// Helper function outside component
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
 export default function App() {
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -26,14 +40,8 @@ export default function App() {
   const [copied, setCopied] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
+  const dragCounter = useRef(0)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const isZipFile = async (file: File): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -50,8 +58,16 @@ export default function App() {
   const extractZipContents = async (file: File): Promise<ExtractedFile[]> => {
     const zip = await JSZip.loadAsync(file)
     const files: ExtractedFile[] = []
+    const fileKeys = Object.keys(zip.files)
+    
+    // ZIP bomb protection: limit number of files
+    if (fileKeys.length > MAX_FILES_PER_ZIP) {
+      throw new Error(`Too many files in archive. Maximum is ${MAX_FILES_PER_ZIP}.`)
+    }
 
-    const promises = Object.keys(zip.files).map(async (path) => {
+    let totalUncompressedSize = 0
+
+    const promises = fileKeys.map(async (path) => {
       const zipEntry = zip.files[path]
       const isDirectory = zipEntry.dir
 
@@ -62,9 +78,18 @@ export default function App() {
         try {
           content = await zipEntry.async('string')
           size = content.length
-        } catch {
+          totalUncompressedSize += size
+          
+          // Check uncompressed size limit
+          if (totalUncompressedSize > MAX_ZIP_UNCOMPRESSED_SIZE) {
+            throw new Error(`Total uncompressed size exceeds ${formatFileSize(MAX_ZIP_UNCOMPRESSED_SIZE)}.`)
+          }
+        } catch (error) {
+          if (error instanceof Error && error.message.includes('exceeds')) {
+            throw error
+          }
           try {
-            const uncompressedSize = (zipEntry as any)?.uncompressedSize || 0
+            const uncompressedSize = (zipEntry as { uncompressedSize?: number })?.uncompressedSize || 0
             content = `[Binary file - ${formatFileSize(uncompressedSize)}]`
             size = uncompressedSize
           } catch {
@@ -85,6 +110,18 @@ export default function App() {
 
     await Promise.all(promises)
 
+    // Sanitize file paths to prevent path traversal
+    files.forEach(file => {
+      // Remove leading slashes and normalize path
+      file.path = file.path.replace(/^\/+/, '')
+      // Ensure no parent directory references (simple sanitization)
+      const pathParts = file.path.split('/')
+      const sanitizedParts = pathParts.filter(part => part !== '..' && part !== '.')
+      file.path = sanitizedParts.join('/')
+      // Update name based on sanitized path
+      file.name = sanitizedParts.length > 0 ? sanitizedParts[sanitizedParts.length - 1] : file.name
+    })
+
     return files.sort((a, b) => {
       if (a.isDirectory && !b.isDirectory) return -1
       if (!a.isDirectory && b.isDirectory) return 1
@@ -96,8 +133,28 @@ export default function App() {
     setError(null)
     setIsLoading(true)
 
-    if (!file.name.toLowerCase().endsWith('.util')) {
+    // Cancel any previous operation
+    abortControllerRef.current?.abort()
+    abortControllerRef.current = new AbortController()
+
+    // File size validation
+    if (file.size > MAX_FILE_SIZE) {
+      setError(`File too large. Maximum size is ${formatFileSize(MAX_FILE_SIZE)}.`)
+      setIsLoading(false)
+      return
+    }
+
+    // Extension validation with additional checks
+    const fileName = file.name.toLowerCase()
+    if (!fileName.endsWith('.util')) {
       setError('Invalid file type. Please upload a .util file.')
+      setIsLoading(false)
+      return
+    }
+
+    // Additional MIME type check (if available)
+    if (file.type && !file.type.includes('zip') && !file.type.includes('octet-stream')) {
+      setError('Invalid file type. The file does not appear to be a ZIP archive.')
       setIsLoading(false)
       return
     }
@@ -154,19 +211,34 @@ export default function App() {
     setIsLoading(false)
   }, [])
 
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current++
+    if (dragCounter.current === 1) {
+      setIsDragging(true)
+    }
+  }, [])
+
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
-    setIsDragging(true)
+    e.stopPropagation()
   }, [])
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault()
-    setIsDragging(false)
+    e.stopPropagation()
+    dragCounter.current--
+    if (dragCounter.current === 0) {
+      setIsDragging(false)
+    }
   }, [])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
+    e.stopPropagation()
     setIsDragging(false)
+    dragCounter.current = 0
 
     const files = e.dataTransfer.files
     if (files.length > 0) {
@@ -227,6 +299,18 @@ export default function App() {
     }
   }, [])
 
+  // Memoize expensive calculations
+  const lineCount = useMemo(() => {
+    return fileInfo?.selectedFile?.content.split('\n').length || 0
+  }, [fileInfo?.selectedFile?.content])
+
+  // Cleanup abort controller on unmount
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort()
+    }
+  }, [])
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-800 p-4 md:p-8">
       <div className="mx-auto max-w-6xl">
@@ -255,6 +339,7 @@ export default function App() {
         {!fileInfo ? (
           <div
             onClick={handleClick}
+            onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -421,7 +506,7 @@ export default function App() {
                 <div className="relative">
                   <div className="absolute right-3 top-3 z-10">
                     <span className="rounded-full bg-zinc-800 px-2 py-1 text-xs text-zinc-500">
-                      {fileInfo.selectedFile?.content.split('\n').length || 0} lines
+                      {lineCount} lines
                     </span>
                   </div>
 
